@@ -1,0 +1,17 @@
+{
+  "name": "angular-utils",
+  "authors": [
+    "Glauco Morais <glaucofmorais@gmail.com>"
+  ],
+  "description": "Ungonnak's utilities for AngularJS projects.",
+  "keywords": [
+    "angular",
+    "utilities",
+    "bootstrap"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "angular": "^1.5.5",
+    "angular-messages": "^1.5.5"
+  }
+}
