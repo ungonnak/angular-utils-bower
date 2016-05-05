@@ -10,8 +10,9 @@ A collection of directives and services that is used in our projects.
 
 ### Validators
 * unique: Send an AJAX request to the backend server and check if the input value is unique.
+* match: Checks if an input value is equals another.
 
-### services
+### Services
 * uauHelpers: Service that contain helpers to show validation messages.
 
 Documentation coming soon.

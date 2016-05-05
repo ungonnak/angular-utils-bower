@@ -1,4 +1,4 @@
-angular.module('ungonnak-angular-utils', ['uau.templates', 'uau.canSubmit', 'uau.currency', 'uau.feedbackIcon', 'uau.hasFeedback', 'uau.helpers', 'uau.showValidationMessages', 'uau.uniqueValidator']);
+angular.module('ungonnak-angular-utils', ['uau.templates', 'uau.canSubmit', 'uau.currency', 'uau.feedbackIcon', 'uau.hasFeedback', 'uau.helpers', 'uau.matchValidator', 'uau.showValidationMessages', 'uau.uniqueValidator']);
 angular.module('uau.templates', ['uau/templates/feedback-icon.html']);
 angular.module('uau.canSubmit', [])
   .directive('canSubmit', ['$timeout', function() {
@@ -38,7 +38,8 @@ angular.module('uau.canSubmit', [])
             continue;
           }
 
-          if (form[item] && form[item].$setTouched) {
+          if (form[item] && form[item].$setTouched && form[item].$validate) {
+            form[item].$validate();
             form[item].$setTouched();
             delete(form[item].$error.server);
           }
@@ -144,6 +145,8 @@ angular.module('uau.canSubmit', [])
       function evaluate(target) {
         if (!target) return;
 
+        resetClasses();
+
         if (target.$invalid && (target.$touched || target.$dirty)) {
           element.addClass('has-error');
         } else if (target.$valid) {
@@ -177,13 +180,30 @@ angular.module('uau.canSubmit', [])
       var validation = filterValidationResponse(messages);
 
       for (var container in validation) {
-        var fieldset = validation[container];
+        if (validation[container] instanceof Object) {
+          traverseFieldset(validation[container]);
+        } else {
+          processFormField(form[container], validation[container]);
+        }
+      }
 
+      function traverseFieldset(fieldset) {
         for (var field in fieldset) {
-          form[field].$invalid = true;
-          form[field].$error.server = fieldset[field];
+          processFormField(form[field], fieldset[field]);
+        }
+      }
 
-          messagePool.push(fieldset[field]);
+      function processFormField(field, message) {
+        if (field &&
+          field.hasOwnProperty('$invalid') &&
+          field.hasOwnProperty('$error')
+        ) {
+          field.$invalid = true;
+          field.$error.server = message;
+        }
+
+        if (messagePool) {
+          messagePool.push(message);
         }
       }
     }
@@ -217,6 +237,40 @@ angular.module('uau.canSubmit', [])
       return filteredMessages;
     }
   }]);
+;angular.module('uau.matchValidator', [])
+  .directive('match', function() {
+    return {
+      require: 'ng-model',
+      link: link
+    };
+
+    function link($scope, node, attrs, ngModelController) {
+      var element = angular.element(node);
+      var target = angular.element('#' + attrs.match);
+
+      element.on('keyup', function() {
+        $scope.$apply(function() {
+          if (target.val() === '') {
+            ngModelController.$setValidity('match', true);
+          }
+
+          if (element.val() !== '') {
+            ngModelController.$validate();
+          }
+        });
+      });
+
+      ngModelController.$validators.match = matchValidator;
+
+      attrs.$observe('match', function() {
+        ngModelController.$validate();
+      });
+
+      function matchValidator(modelValue, viewValue) {
+        return element.val() === target.val();
+      }
+    }
+  });
 ;angular.module('uau.showValidationMessages', ['ngMessages'])
   .directive('showValidationMessages', function() {
     return {
@@ -233,7 +287,10 @@ angular.module('uau.canSubmit', [])
       function evaluate(target) {
         if (!target) return;
 
-        if ((target.$dirty || target.$touched) && target.$error) {
+        if (
+          (target.$dirty || target.$touched) &&
+          Object.keys(target.$error).length > 0
+        ) {
           element.show();
         } else {
           element.hide();
@@ -250,13 +307,14 @@ angular.module('uau.canSubmit', [])
     };
 
     function link($scope, node, attrs, ngModelController) {
-      if (!ngModel) return;
+      if (!ngModelController) return;
 
       var timeout;
+      var element = angular.element(node);
 
       ngModelController.$validators.unique = validateUnique;
 
-      attrs.$observe('required', function() {
+      attrs.$observe('unique', function() {
         ngModelController.$validate();
       });
 
@@ -277,7 +335,8 @@ angular.module('uau.canSubmit', [])
             params: {
               model: attrs.unique,
               field: ngModelController.$name,
-              value: modelValue
+              value: modelValue,
+              ignore: attrs.ignore || null
             }
           })
             .then(checkSuccessful);
