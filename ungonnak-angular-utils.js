@@ -69,11 +69,22 @@ angular.module('uau.canSubmit', [])
         var parsed = 0;
         var number = data.toString().replace(/\D+/g, '');
         var significative = number.substring(0, number.length - decimalPlaces);
-        var decimals = number.substring(number.length - decimals);
+        var decimals = number.substring(number.length - decimalPlaces);
+
+        if (!significative) {
+          significative = 0;
+        }
+
+        if (!decimals) {
+          decimals = 0;
+        }
+
+        significative = (parseInt(significative)).toString();
+        decimals = parseInt(decimals).toString();
 
         if (decimals.length < decimalPlaces) {
-          decimals = (new Array(decimalPlaces - decimals.length + 1)).join(0);
-          decimals += decimals;
+          decimals = (new Array(decimalPlaces - decimals.length + 1)).join(0) +
+            decimals;
         }
 
         parsed = Number(significative + '.' + decimals);
